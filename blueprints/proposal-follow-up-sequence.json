@@ -1,0 +1,78 @@
+{
+  "id": "proposal-follow-up-sequence",
+  "name": "Proposal Follow-Up Sequence",
+  "goal": "Automatically remind prospects and reps when proposals are open but not signed.",
+  "best_for": [
+    "Open quotes",
+    "Unsigned proposals",
+    "Late-stage deals with inactivity"
+  ],
+  "required_inputs": [
+    "source_system",
+    "destination_system",
+    "task_system",
+    "field_map",
+    "qualification_rules",
+    "owner_assignment",
+    "message_templates",
+    "error_alert_channel",
+    "test_records"
+  ],
+  "trigger": {
+    "event": "Proposal status changes to sent or remains open for the configured wait period",
+    "setup_notes": [
+      "Connect the proposal or CRM system.",
+      "Confirm the signed, declined, and expired status values.",
+      "Create wait periods that match the sales team's follow-up policy."
+    ]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "name": "Find open proposals",
+      "instructions": "Search for proposals where status is sent, viewed, or open and the close date has not passed."
+    },
+    {
+      "step": 2,
+      "name": "Exclude closed records",
+      "instructions": "Stop the workflow when the proposal is signed, declined, expired, or manually paused."
+    },
+    {
+      "step": 3,
+      "name": "Send timed follow-up",
+      "instructions": "Send the approved template for the current follow-up day and include the proposal link, owner signature, and next-step call to action."
+    },
+    {
+      "step": 4,
+      "name": "Create rep task",
+      "instructions": "Create a task for the owner when the proposal remains open after the configured wait period."
+    },
+    {
+      "step": 5,
+      "name": "Update CRM activity",
+      "instructions": "Log the follow-up email or task in the CRM so the opportunity timeline stays complete."
+    }
+  ],
+  "manual_tests": [
+    {
+      "name": "Open proposal follow-up",
+      "input": "A proposal that has been open longer than the first wait period.",
+      "expected_result": "Follow-up message is sent and CRM activity is logged."
+    },
+    {
+      "name": "Signed proposal exclusion",
+      "input": "A proposal with signed status.",
+      "expected_result": "Workflow stops without sending any follow-up."
+    },
+    {
+      "name": "Missing owner",
+      "input": "An open proposal without an assigned owner.",
+      "expected_result": "Workflow assigns fallback owner or sends an error alert."
+    }
+  ],
+  "handoff_instructions": [
+    "Review all follow-up templates with sales leadership before launch.",
+    "Make sure the unsubscribe or opt-out process is respected for external messages.",
+    "Monitor reply and close rates after each follow-up interval."
+  ]
+}

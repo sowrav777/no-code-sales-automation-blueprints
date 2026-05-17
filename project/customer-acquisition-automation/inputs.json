@@ -1,0 +1,135 @@
+{
+  "project_name": "Customer Acquisition Automation",
+  "sales_goal": "Convert qualified inbound leads into booked demos and prevent late-stage proposals from stalling.",
+  "business_owner": "Head of Sales",
+  "automation_owner": "RevOps Manager",
+  "error_alert_channel": "Slack: #sales-automation-alerts",
+  "timezone": "America/New_York",
+  "launch_stage": "pilot",
+  "systems": {
+    "source_system": "Typeform: Website Demo Request",
+    "destination_system": "HubSpot: Contacts, Companies, Deals",
+    "notification_system": "Slack: #inbound-demo-requests",
+    "task_system": "Asana: Sales Follow-up",
+    "calendar_system": "Calendly: Account Executive Routing"
+  },
+  "field_map": [
+    {
+      "source_field": "First Name",
+      "destination_field": "firstname",
+      "data_type": "text",
+      "fallback_value": "there",
+      "transform": "Trim spaces."
+    },
+    {
+      "source_field": "Last Name",
+      "destination_field": "lastname",
+      "data_type": "text",
+      "fallback_value": "Unknown",
+      "transform": "Trim spaces."
+    },
+    {
+      "source_field": "Work Email",
+      "destination_field": "email",
+      "data_type": "email",
+      "fallback_value": null,
+      "transform": "Lowercase before duplicate matching."
+    },
+    {
+      "source_field": "Company Name",
+      "destination_field": "company",
+      "data_type": "text",
+      "fallback_value": "Unknown company",
+      "transform": "Trim spaces."
+    },
+    {
+      "source_field": "Employee Count",
+      "destination_field": "employee_count",
+      "data_type": "number",
+      "fallback_value": 0,
+      "transform": "Convert to number."
+    },
+    {
+      "source_field": "Product Interest",
+      "destination_field": "product_interest",
+      "data_type": "picklist",
+      "fallback_value": "General",
+      "transform": "Match to existing CRM picklist values."
+    }
+  ],
+  "duplicate_match_field": "email",
+  "qualification_rules": [
+    {
+      "rule_name": "Business email required",
+      "field": "email",
+      "operator": "is_known",
+      "value": null,
+      "on_match": "continue",
+      "on_no_match": "stop_and_notify"
+    },
+    {
+      "rule_name": "Minimum company size",
+      "field": "employee_count",
+      "operator": "greater_than",
+      "value": 50,
+      "on_match": "continue",
+      "on_no_match": "mark_disqualified"
+    }
+  ],
+  "owner_assignment": {
+    "assignment_method": "territory",
+    "assignment_rules": [
+      "United States East -> Alex Rivera",
+      "United States West -> Jordan Lee",
+      "Canada -> Morgan Chen",
+      "All other territories -> Inbound SDR Queue"
+    ],
+    "fallback_owner": "Inbound SDR Queue",
+    "sla_minutes": 15
+  },
+  "message_templates": [
+    {
+      "template_name": "Inbound demo confirmation",
+      "channel": "email",
+      "subject": "Thanks for requesting a demo",
+      "body": "Hi {{first_name}}, thanks for requesting a demo. Use this link to book time with {{owner_name}}: {{calendar_link}}.",
+      "send_from": "assigned_owner"
+    },
+    {
+      "template_name": "New qualified lead alert",
+      "channel": "slack",
+      "subject": null,
+      "body": "New qualified lead: {{first_name}} {{last_name}} from {{company}}. Owner: {{owner_name}}. CRM: {{crm_link}}.",
+      "send_from": "automation_bot"
+    },
+    {
+      "template_name": "Proposal follow-up one",
+      "channel": "email",
+      "subject": "Any questions about the proposal?",
+      "body": "Hi {{first_name}}, checking in on the proposal. Reply here or book time with {{owner_name}} if you want to review it together.",
+      "send_from": "assigned_owner"
+    }
+  ],
+  "test_records": [
+    {
+      "name": "Happy path demo request",
+      "input_summary": "Qualified lead with valid work email, company, employee count, and territory.",
+      "expected_result": "CRM contact and deal are created, owner is assigned, prospect email is sent, Slack alert is posted, and SLA task is created."
+    },
+    {
+      "name": "Disqualified small company",
+      "input_summary": "Lead has valid email but employee count is 10.",
+      "expected_result": "Lead is marked disqualified and no demo booking email is sent."
+    },
+    {
+      "name": "Missing email error",
+      "input_summary": "Lead has name and company but no email address.",
+      "expected_result": "Workflow stops and sends a message to Slack: #sales-automation-alerts."
+    }
+  ],
+  "selected_blueprints": [
+    "lead-capture-to-crm",
+    "inbound-demo-request-routing",
+    "proposal-follow-up-sequence"
+  ]
+}

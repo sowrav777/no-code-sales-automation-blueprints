@@ -1,0 +1,87 @@
+{
+  "id": "lead-capture-to-crm",
+  "name": "Lead Capture to CRM",
+  "goal": "Create or update CRM contacts and deals from a form, spreadsheet, or landing page submission.",
+  "best_for": [
+    "Inbound lead forms",
+    "Webinar registrations",
+    "Partner lead spreadsheets"
+  ],
+  "required_inputs": [
+    "source_system",
+    "destination_system",
+    "field_map",
+    "duplicate_match_field",
+    "qualification_rules",
+    "owner_assignment",
+    "error_alert_channel",
+    "test_records"
+  ],
+  "trigger": {
+    "event": "New or updated lead record",
+    "setup_notes": [
+      "Connect the source app account.",
+      "Select the form, table, or sheet that contains new leads.",
+      "Load a recent test record before mapping fields."
+    ]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "name": "Normalize incoming fields",
+      "instructions": "Format email addresses in lowercase, trim extra spaces, and convert dates to the project timezone."
+    },
+    {
+      "step": 2,
+      "name": "Check for duplicates",
+      "instructions": "Search the CRM by duplicate_match_field before creating a new contact. Update the existing contact when a match is found."
+    },
+    {
+      "step": 3,
+      "name": "Apply qualification rules",
+      "instructions": "Continue only when the record meets the required qualification rules. Log disqualified records with the reason."
+    },
+    {
+      "step": 4,
+      "name": "Create or update CRM records",
+      "instructions": "Map every source field to the destination field map and create the contact, company, and deal records required by the project."
+    },
+    {
+      "step": 5,
+      "name": "Assign an owner",
+      "instructions": "Use the owner assignment method and fallback owner so no qualified lead is left unowned."
+    },
+    {
+      "step": 6,
+      "name": "Send internal notification",
+      "instructions": "Send a Slack, email, or task notification with the lead summary, assigned owner, source, score, and CRM link."
+    },
+    {
+      "step": 7,
+      "name": "Handle failures",
+      "instructions": "Send failed runs to the error alert channel with the source record link and the failing step name."
+    }
+  ],
+  "manual_tests": [
+    {
+      "name": "Happy path lead",
+      "input": "Qualified test lead with all required fields.",
+      "expected_result": "CRM contact and deal are created or updated, owner is assigned, and notification is sent."
+    },
+    {
+      "name": "Duplicate lead",
+      "input": "Lead with an email address already in the CRM.",
+      "expected_result": "Existing contact is updated instead of creating a duplicate."
+    },
+    {
+      "name": "Missing required field",
+      "input": "Lead without an email address.",
+      "expected_result": "Workflow stops and sends an error alert."
+    }
+  ],
+  "handoff_instructions": [
+    "Document the source app connection owner.",
+    "Save links to the automation, CRM list, and notification channel.",
+    "Review duplicate and error logs daily during the pilot stage."
+  ]
+}
