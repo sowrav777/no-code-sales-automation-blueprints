@@ -1,0 +1,79 @@
+{
+  "id": "renewal-expansion-alerts",
+  "name": "Renewal and Expansion Alerts",
+  "goal": "Alert account owners before renewal dates and surface expansion opportunities or risk signals.",
+  "best_for": [
+    "Customer success handoffs",
+    "Renewal pipeline creation",
+    "Expansion opportunity alerts"
+  ],
+  "required_inputs": [
+    "source_system",
+    "destination_system",
+    "notification_system",
+    "task_system",
+    "field_map",
+    "qualification_rules",
+    "owner_assignment",
+    "message_templates",
+    "error_alert_channel",
+    "test_records"
+  ],
+  "trigger": {
+    "event": "Renewal date reaches configured lookback window or customer signal changes",
+    "setup_notes": [
+      "Connect the CRM, billing, product usage, or customer success system.",
+      "Confirm renewal date, contract value, health score, usage, and owner fields.",
+      "Choose alert windows such as 120, 90, 60, and 30 days before renewal."
+    ]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "name": "Find accounts in renewal window",
+      "instructions": "Search for customers with renewal dates inside the configured lookback window and active contract status."
+    },
+    {
+      "step": 2,
+      "name": "Evaluate account signal",
+      "instructions": "Apply rules for health score, usage trend, seat utilization, support volume, expansion intent, and contract value."
+    },
+    {
+      "step": 3,
+      "name": "Create renewal or expansion task",
+      "instructions": "Create a task for the account owner with renewal date, risk reason, expansion reason, and recommended next action."
+    },
+    {
+      "step": 4,
+      "name": "Notify account team",
+      "instructions": "Send a Slack or email alert to the account team with links to the account, renewal opportunity, and customer health dashboard."
+    },
+    {
+      "step": 5,
+      "name": "Update destination records",
+      "instructions": "Update the CRM renewal stage, next step, and alert timestamp so duplicate alerts are avoided."
+    }
+  ],
+  "manual_tests": [
+    {
+      "name": "Renewal alert",
+      "input": "An active customer with renewal date inside the first alert window.",
+      "expected_result": "Owner task and team notification are created with correct renewal details."
+    },
+    {
+      "name": "Expansion alert",
+      "input": "A customer with high usage and open expansion intent.",
+      "expected_result": "Expansion task is created and CRM record is updated."
+    },
+    {
+      "name": "Inactive customer exclusion",
+      "input": "A canceled customer inside the renewal window.",
+      "expected_result": "Workflow stops without creating a renewal task."
+    }
+  ],
+  "handoff_instructions": [
+    "Validate renewal dates against the billing system before launch.",
+    "Review health score and expansion rules with customer success leadership.",
+    "Track task completion and renewal outcomes in a weekly operations review."
+  ]
+}

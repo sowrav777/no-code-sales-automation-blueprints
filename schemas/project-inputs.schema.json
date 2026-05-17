@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sales Automation Project Inputs",
+  "type": "object",
+  "required": [
+    "project_name",
+    "sales_goal",
+    "business_owner",
+    "automation_owner",
+    "error_alert_channel",
+    "timezone",
+    "launch_stage",
+    "systems",
+    "field_map",
+    "qualification_rules",
+    "owner_assignment",
+    "message_templates",
+    "test_records"
+  ]
+}

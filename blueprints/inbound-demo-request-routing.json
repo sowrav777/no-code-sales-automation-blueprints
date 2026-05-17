@@ -1,0 +1,84 @@
+{
+  "id": "inbound-demo-request-routing",
+  "name": "Inbound Demo Request Routing",
+  "goal": "Qualify demo requests, route qualified prospects to the right owner, and send booking instructions.",
+  "best_for": [
+    "Contact us forms",
+    "Book a demo pages",
+    "High-intent product inquiries"
+  ],
+  "required_inputs": [
+    "source_system",
+    "destination_system",
+    "calendar_system",
+    "notification_system",
+    "field_map",
+    "qualification_rules",
+    "owner_assignment",
+    "message_templates",
+    "error_alert_channel",
+    "test_records"
+  ],
+  "trigger": {
+    "event": "New demo request submitted",
+    "setup_notes": [
+      "Connect the form or website source.",
+      "Confirm that calendar links exist for every possible owner.",
+      "Prepare one test request per routing path."
+    ]
+  },
+  "workflow_steps": [
+    {
+      "step": 1,
+      "name": "Score and qualify the request",
+      "instructions": "Evaluate company size, work email, country, product interest, and urgency against the qualification rules."
+    },
+    {
+      "step": 2,
+      "name": "Route to the correct owner",
+      "instructions": "Use territory, segment, or round-robin rules to choose an owner and calendar link."
+    },
+    {
+      "step": 3,
+      "name": "Create or update CRM records",
+      "instructions": "Create or update the contact and deal, then write the owner, lifecycle stage, lead source, and requested product fields."
+    },
+    {
+      "step": 4,
+      "name": "Send prospect confirmation",
+      "instructions": "Send the approved email template with the assigned owner name and booking link."
+    },
+    {
+      "step": 5,
+      "name": "Notify the sales team",
+      "instructions": "Post the request details, qualification result, owner, SLA, and CRM link to the notification system."
+    },
+    {
+      "step": 6,
+      "name": "Create SLA task",
+      "instructions": "Create a follow-up task due within the configured SLA if the prospect has not booked."
+    }
+  ],
+  "manual_tests": [
+    {
+      "name": "Qualified enterprise request",
+      "input": "A request that matches the highest-priority segment.",
+      "expected_result": "Correct owner, CRM records, confirmation email, Slack alert, and SLA task are created."
+    },
+    {
+      "name": "Unqualified request",
+      "input": "A request with a personal email and company size below the threshold.",
+      "expected_result": "Workflow records the reason and sends the alternate message template if configured."
+    },
+    {
+      "name": "Missing calendar link",
+      "input": "A request that routes to an owner without a calendar link.",
+      "expected_result": "Workflow uses fallback owner or sends an error alert."
+    }
+  ],
+  "handoff_instructions": [
+    "Confirm every owner has an active calendar link before launch.",
+    "Publish the SLA and routing rules to the sales team.",
+    "Audit owner assignment weekly for the first month."
+  ]
+}
