@@ -1,0 +1,347 @@
+{
+  "blueprint_name": "Demo Request Routing & Calendly Integration",
+  "blueprint_version": "1.0",
+  "description": "Routes qualified demo requests to the correct sales rep by territory, sends Calendly booking link, creates SLA task, and notifies rep via Slack",
+  "use_case": "Demo requests need qualification, owner assignment, calendar routing, and Slack alerts",
+  "estimated_build_time_minutes": 45,
+  "difficulty": "Intermediate",
+
+  "trigger": {
+    "type": "HubSpot Contact Property Change",
+    "description": "Fires when a lead's 'interested_in' field changes to 'demo_request' OR when a form field is filled",
+    "condition": "interested_in = 'demo_request' AND status = 'qualified'",
+    "required_fields": [
+      "firstname",
+      "lastname",
+      "email",
+      "phone",
+      "company",
+      "hs_state",
+      "assigned_owner",
+      "calendar_link"
+    ]
+  },
+
+  "required_inputs": [
+    "Territory-to-rep mapping with Calendly links",
+    "Demo booking email template",
+    "Slack channel for demo alerts (#sales-demo-requests)",
+    "SLA time (hours to book demo)",
+    "HubSpot custom properties: demo_requested_date, calendar_link_sent, sla_deadline"
+  ],
+
+  "build_steps": [
+    {
+      "step_number": 1,
+      "action": "Create Trigger",
+      "tool": "HubSpot Workflow or Zapier",
+      "details": "Monitor for new contacts where interested_in = 'demo_request'",
+      "tips": [
+        "Use HubSpot Workflows for native integration (preferred)",
+        "Alternative: Use Zapier trigger on HubSpot contact updated"
+      ]
+    },
+    {
+      "step_number": 2,
+      "action": "Filter: Is Contact Qualified?",
+      "tool": "HubSpot Workflow Condition",
+      "logic": "Continue ONLY if hs_lead_status = 'Qualified'",
+      "details": "Skip unqualified or test leads",
+      "branch": "Unqualified → Stop (will be routed differently)"
+    },
+    {
+      "step_number": 3,
+      "action": "Lookup Territory by State",
+      "tool": "Zapier Formatter or Make Router",
+      "logic": "Use hs_state to look up assigned_owner and calendar_link",
+      "mapping": {
+        "CA|WA|OR": {"owner": "west-coast-rep@yourcompany.com", "calendly": "https://calendly.com/west-coast-rep/30min"},
+        "TX|FL|GA|NC|SC": {"owner": "south-rep@yourcompany.com", "calendly": "https://calendly.com/south-rep/30min"},
+        "NY|MA|PA|NJ|CT": {"owner": "east-coast-rep@yourcompany.com", "calendly": "https://calendly.com/east-coast-rep/30min"},
+        "DEFAULT": {"owner": "sales-team-lead@yourcompany.com", "calendly": "https://calendly.com/sales-team-lead/30min"}
+      }
+    },
+    {
+      "step_number": 4,
+      "action": "Verify Calendly Link Valid",
+      "tool": "Zapier Formatter or HTTP",
+      "details": "Quick check that calendar link is not empty and contains 'calendly'",
+      "error_handling": "If invalid → Send alert to sales-ops, skip demo request"
+    },
+    {
+      "step_number": 5,
+      "action": "Send Demo Booking Email",
+      "tool": "Gmail or HubSpot Send Email",
+      "template": "demo_booking_invitation",
+      "personalization": {
+        "first_name": "{{firstname}}",
+        "last_name": "{{lastname}}",
+        "company": "{{company}}",
+        "calendar_link": "{{calendar_link}}",
+        "sales_rep_name": "{{assigned_owner_name}}"
+      },
+      "details": "Send professional demo invitation with calendar link"
+    },
+    {
+      "step_number": 6,
+      "action": "Create SLA Task in HubSpot",
+      "tool": "HubSpot Create Task",
+      "task_details": {
+        "title": "Follow up: {firstname} {lastname} - Demo requested",
+        "description": "Send demo booking link and calendar. If no response in 24h, call.",
+        "assigned_to": "{{assigned_owner}}",
+        "due_date": "{{today + 1 day}}",
+        "priority": "high",
+        "associated_contact": "{{contact_id}}"
+      },
+      "details": "Create reminder task so sales rep has clear action items"
+    },
+    {
+      "step_number": 7,
+      "action": "Update HubSpot Contact Properties",
+      "tool": "HubSpot Update Contact",
+      "updates": {
+        "demo_requested_date": "{{now}}",
+        "calendar_link_sent": "{{calendar_link}}",
+        "sla_deadline": "{{now + 2 hours}}"
+      },
+      "details": "Record that demo request was processed and SLA deadline"
+    },
+    {
+      "step_number": 8,
+      "action": "Send Slack Alert",
+      "tool": "Slack Send Message",
+      "channel": "#sales-demo-requests",
+      "template": "📅 Demo booked: {{firstname}} {{lastname}} from {{company}} ({{hs_state}})\n→ Calendar: {{calendar_link}}\n→ Rep: {{assigned_owner}}\n→ SLA: Respond within 2 hours\n→ HubSpot: {{hubspot_contact_link}}",
+      "details": "Notify assigned rep immediately"
+    },
+    {
+      "step_number": 9,
+      "action": "Send Rep Confirmation Email",
+      "tool": "Gmail",
+      "recipient": "{{assigned_owner_email}}",
+      "subject": "New Demo Request - {{firstname}} {{lastname}} from {{company}}",
+      "body": "Hi {{assigned_owner}},\n\nNew demo request assigned to you:\n\nLead: {{firstname}} {{lastname}}\nCompany: {{company}}\nEmail: {{email}}\nPhone: {{phone}}\nState: {{hs_state}}\n\nWe've already sent them your Calendly link. Your SLA is to respond within 2 hours.\n\nChecklist:\n☐ Respond to their email or call\n☐ Book the demo on your calendar\n☐ Send meeting prep (optional)\n☐ Mark task complete in HubSpot\n\nHubSpot Link: {{hubspot_contact_link}}\n\nThanks,\nSales Operations",
+      "details": "Give rep all context they need to act fast"
+    },
+    {
+      "step_number": 10,
+      "action": "Log to Google Sheet",
+      "tool": "Google Sheets Append Row",
+      "details": "Track all demo requests for reporting",
+      "columns": [
+        "timestamp",
+        "lead_name",
+        "company",
+        "state",
+        "assigned_rep",
+        "calendar_link_sent",
+        "sla_deadline",
+        "hubspot_contact_id",
+        "status"
+      ]
+    },
+    {
+      "step_number": 11,
+      "action": "Error Handling: Log Failures",
+      "tool": "Google Sheets Append Row",
+      "details": "If any step fails (bad email, invalid calendar link, HubSpot API error), log it",
+      "error_sheet": "Same Google Sheet, tab 'Errors'",
+      "notification": "Email to sales-ops@yourcompany.com with full error details"
+    }
+  ],
+
+  "manual_tests": [
+    {
+      "test_number": 1,
+      "test_name": "Test: CA Territory → West Coast Rep",
+      "test_data": {
+        "firstname": "Test",
+        "lastname": "Lead",
+        "email": "test+ca@yourcompany.com",
+        "company": "CA Company Inc",
+        "hs_state": "CA",
+        "phone": "555-0101"
+      },
+      "trigger": "Set interested_in = 'demo_request' in HubSpot contact",
+      "expected_result": [
+        "Email sent to test+ca@yourcompany.com with west_coast_rep's Calendly link",
+        "Task created in HubSpot assigned to west_coast_rep",
+        "Contact property 'calendar_link_sent' = west_coast_rep's link",
+        "sla_deadline property set to now + 2 hours",
+        "Slack message posted to #sales-demo-requests mentioning west_coast_rep",
+        "Email sent to west-coast-rep@yourcompany.com with lead details"
+      ],
+      "how_to_verify": "1. Check sent email folder - should see email to test lead. 2. Open HubSpot contact - check task, check updated properties. 3. Check #sales-demo-requests Slack - should see new message. 4. Check west_coast_rep's inbox - should see notification."
+    },
+    {
+      "test_number": 2,
+      "test_name": "Test: TX Territory → South Rep",
+      "test_data": {
+        "firstname": "South",
+        "lastname": "Test",
+        "email": "test+tx@yourcompany.com",
+        "company": "Texas Company",
+        "hs_state": "TX",
+        "phone": "555-0102"
+      },
+      "trigger": "Set interested_in = 'demo_request' in HubSpot contact",
+      "expected_result": [
+        "Calendar link belongs to south_rep, not west_coast_rep",
+        "Task assigned to south_rep",
+        "Slack alert mentions south_rep",
+        "Email sent to south-rep@yourcompany.com"
+      ],
+      "how_to_verify": "Verify all steps use south_rep, not west_coast_rep"
+    },
+    {
+      "test_number": 3,
+      "test_name": "Test: Unqualified Lead (should skip)",
+      "test_data": {
+        "firstname": "Unqualified",
+        "lastname": "Lead",
+        "email": "test+unqualified@yourcompany.com",
+        "company": "Unknown Company",
+        "hs_state": "CA",
+        "hs_lead_status": "New"
+      },
+      "trigger": "Set interested_in = 'demo_request' BUT hs_lead_status = 'New' (not Qualified)",
+      "expected_result": [
+        "Automation stops at qualification filter",
+        "NO email sent to lead",
+        "NO task created",
+        "NO Slack alert",
+        "Contact NOT updated with demo properties"
+      ],
+      "how_to_verify": "1. HubSpot contact should have NO new tasks. 2. Slack should be silent. 3. Contact properties unchanged."
+    },
+    {
+      "test_number": 4,
+      "test_name": "Test: Missing Calendar Link (error handling)",
+      "test_data": {
+        "firstname": "Missing",
+        "lastname": "Link",
+        "email": "test+nolink@yourcompany.com",
+        "company": "No Link Corp",
+        "hs_state": "CA",
+        "hs_lead_status": "Qualified",
+        "assigned_owner_calendar_link": "" 
+      },
+      "trigger": "Set interested_in = 'demo_request' but calendar_link is empty",
+      "expected_result": [
+        "Automation stops at calendar link validation",
+        "NO email sent (cannot include calendar link)",
+        "Alert sent to sales-ops@yourcompany.com: 'Missing calendar link for territory CA'",
+        "Error logged to Google Sheet error tab"
+      ],
+      "how_to_verify": "1. Check Google Sheet errors - should have entry for missing link. 2. Check sales-ops email - should have alert. 3. No demo email sent to test lead."
+    },
+    {
+      "test_number": 5,
+      "test_name": "Test: Invalid Email (error handling)",
+      "test_data": {
+        "firstname": "Invalid",
+        "lastname": "Email",
+        "email": "not-an-email",
+        "company": "Invalid Email Corp",
+        "hs_state": "CA",
+        "hs_lead_status": "Qualified"
+      },
+      "trigger": "Set interested_in = 'demo_request' with invalid email format",
+      "expected_result": [
+        "Email to lead fails (invalid address)",
+        "Error caught and logged",
+        "Alert sent to sales-ops: 'Cannot send demo email to invalid-email'",
+        "Slack alert still sent (so rep knows lead exists)",
+        "Manual correction required: Rep should contact lead via phone"
+      ],
+      "how_to_verify": "1. Error logged in Google Sheet. 2. Alert email to sales-ops. 3. Slack message still posted. 4. Phone number visible in HubSpot for manual follow-up."
+    }
+  ],
+
+  "common_mistakes": [
+    {
+      "mistake": "Calendar link goes to wrong rep",
+      "example": "CA lead receives east_coast_rep's Calendly link instead of west_coast_rep",
+      "fix": "Check territory mapping logic. Verify hs_state values match your mapping exactly. Test with different states."
+    },
+    {
+      "mistake": "Task doesn't get assigned to correct owner",
+      "example": "Task created but assigned to 'Sales Team Lead' instead of territorial rep",
+      "fix": "Verify assigned_owner field is being passed correctly from lookup step. Check HubSpot task creation step includes correct 'assigned_to' value."
+    },
+    {
+      "mistake": "Slack message has no mention or link",
+      "example": "@sales-rep doesn't get notification in Slack",
+      "fix": "Add @mention syntax: <@USERID> in Slack message. Get user ID from Slack admin page. Test Slack formatting in Slack directly first."
+    },
+    {
+      "mistake": "SLA deadline not set correctly",
+      "example": "sla_deadline property shows wrong time or date",
+      "fix": "Check timezone settings. Verify 'now + 2 hours' is using same timezone as HubSpot. Consider using a specific time instead (e.g., 9am next day)."
+    },
+    {
+      "mistake": "Automation runs on every contact update",
+      "example": "Rep receives same demo request notification multiple times",
+      "fix": "Add condition to only trigger on interested_in field change, not all updates. Use 'only when' filter for interested_in = 'demo_request'."
+    }
+  ],
+
+  "optimization_tips": [
+    "Add lead scoring: Only route high-scoring leads to reps; lower-scoring leads get sales development rep first",
+    "Add workload balancing: If one rep is overloaded, temporarily route to fallback rep",
+    "Add SMS option: Send SMS to phone number as alternative to email for faster response",
+    "Add calendar sync: Query Calendly to show rep's next available slot in email/Slack message",
+    "Add reminder sequences: If demo not booked within 24h, send automatic reminder to lead and escalate to rep's manager",
+    "Add meeting notes link: Include link to meeting prep doc or discovery questions template"
+  ],
+
+  "troubleshooting": {
+    "issue": "Demo email not being sent",
+    "diagnosis": [
+      "Check email template contains all required variables {{firstname}}, {{email}}, {{calendar_link}}",
+      "Verify email address is not bouncing (check spam list in HubSpot)",
+      "Check that trigger is firing (look for task creation)",
+      "Verify email sending step is not disabled"
+    ],
+    "resolution": "Send a test email manually first to verify template works, then re-enable automation"
+  },
+
+  "success_metrics": {
+    "daily_checks": [
+      "How many demo requests processed?",
+      "Any errors logged?",
+      "Did all reps receive their notifications?"
+    ],
+    "weekly_kpis": [
+      "Total demo requests",
+      "Demo requests → demo booked rate (%)",
+      "Avg time from request to booking (hours)",
+      "SLA compliance (% of reps responding within 2 hours)",
+      "Distribution of demos by rep (even load?)",
+      "Distribution of demos by territory"
+    ],
+    "monthly_kpis": [
+      "Demo volume trend",
+      "Booking conversion rate",
+      "Avg time to demo (days from lead to actual meeting)",
+      "Demo → proposal conversion rate"
+    ]
+  },
+
+  "dependencies": [
+    "HubSpot CRM with custom properties (demo_requested_date, calendar_link_sent, sla_deadline)",
+    "Zapier or Make.com or native HubSpot Workflows",
+    "Calendly account with individual calendars per rep",
+    "Slack workspace connected to HubSpot",
+    "Gmail account for sending rep notifications",
+    "Google Sheets for logging"
+  ],
+
+  "handoff_notes": [
+    "After 1 week, measure booking rate. If <50%, review email copy and calendar links.",
+    "After 2 weeks, check SLA compliance. Are reps responding within 2 hours? Adjust deadline if too tight.",
+    "Monthly, review demo → proposal conversion. If low, add prep materials or discovery questions to booking email.",
+    "Quarterly, review territory load. Are some territories getting more demos than others? Balance routing rules if needed."
+  ]
+}
