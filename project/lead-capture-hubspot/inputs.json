@@ -1,0 +1,284 @@
+{
+  "project_name": "Lead Capture to HubSpot Demo Project",
+  "company_name": "Your Company Inc.",
+  "launch_date": "2026-06-01",
+  "launch_stage": "pilot",
+  "description": "Complete automation from lead form to demo booking to follow-up using HubSpot",
+
+  "source_system": {
+    "type": "Typeform",
+    "name": "Inbound Lead Form",
+    "url": "https://your-form-url.typeform.com/to/yourform",
+    "form_fields": [
+      "first_name",
+      "last_name",
+      "email",
+      "company",
+      "company_state",
+      "phone",
+      "interested_in",
+      "budget_range",
+      "message"
+    ]
+  },
+
+  "destination_system": {
+    "type": "HubSpot CRM",
+    "account_name": "Your Company",
+    "hub_id": "REPLACE_WITH_YOUR_HUB_ID"
+  },
+
+  "orchestration": {
+    "platform": "Zapier",
+    "alternative": "Make.com",
+    "webhooks_required": true,
+    "api_key": "REPLACE_WITH_HUBSPOT_PRIVATE_APP_TOKEN"
+  },
+
+  "field_mapping": {
+    "form_first_name": "firstname",
+    "form_last_name": "lastname",
+    "form_email": "email",
+    "form_company": "company",
+    "form_company_state": "hs_state",
+    "form_phone": "phone",
+    "form_interested_in": "lead_source_form",
+    "form_budget_range": "hs_lead_status",
+    "form_message": "notes"
+  },
+
+  "territory_assignment_rules": [
+    {
+      "rule_id": 1,
+      "name": "West Coast Team",
+      "condition": "company_state IN ('CA', 'WA', 'OR')",
+      "assigned_owner": "west-coast-rep@yourcompany.com",
+      "calendar_link": "https://calendly.com/west-coast-rep/30min",
+      "slack_user": "@west-coast-rep"
+    },
+    {
+      "rule_id": 2,
+      "name": "South Team",
+      "condition": "company_state IN ('TX', 'FL', 'GA', 'NC', 'SC')",
+      "assigned_owner": "south-rep@yourcompany.com",
+      "calendar_link": "https://calendly.com/south-rep/30min",
+      "slack_user": "@south-rep"
+    },
+    {
+      "rule_id": 3,
+      "name": "East Coast Team",
+      "condition": "company_state IN ('NY', 'MA', 'PA', 'NJ', 'CT')",
+      "assigned_owner": "east-coast-rep@yourcompany.com",
+      "calendar_link": "https://calendly.com/east-coast-rep/30min",
+      "slack_user": "@east-coast-rep"
+    },
+    {
+      "rule_id": 4,
+      "name": "Default / Other Territories",
+      "condition": "ALL OTHER",
+      "assigned_owner": "sales-team-lead@yourcompany.com",
+      "calendar_link": "https://calendly.com/sales-team-lead/30min",
+      "slack_user": "@sales-team-lead"
+    }
+  ],
+
+  "qualification_rules": {
+    "include_if": [
+      "email is valid (contains @)",
+      "email is not empty",
+      "company is not empty"
+    ],
+    "exclude_if": [
+      "email contains 'test'",
+      "email domain is '@gmail.com' (unless company filled)",
+      "company name in excluded_companies list"
+    ],
+    "excluded_companies": [
+      "Competitor Inc.",
+      "Test Company",
+      "Demo Corp"
+    ],
+    "minimum_data_required": ["email", "company"]
+  },
+
+  "default_values": {
+    "lifecyclestage": "lead",
+    "source": "web_form",
+    "hs_lead_status": "New",
+    "lead_source_form": "web_form_submission"
+  },
+
+  "sla_targets": {
+    "demo_response_time_hours": 2,
+    "first_follow_up_days": 3,
+    "second_follow_up_days": 10,
+    "escalation_days": 14,
+    "minimum_proposal_amount": 5000
+  },
+
+  "email_templates": {
+    "demo_booking_invitation": {
+      "subject": "Your Personal Demo of [Product Name] - Book a Time",
+      "body": "Hi {first_name},\n\nThanks so much for your interest in {product_name}!\n\nI'd love to show you how we help companies like {company} {value_proposition}.\n\n→ Book your personalized 30-minute demo here: {calendar_link}\n\nNo prep needed—just 30 minutes to explore what's possible.\n\nLooking forward to connecting!\n\nBest,\n{sales_rep_name}\n{sales_rep_title}\n{sales_rep_email}\n{sales_rep_phone}"
+    },
+    "proposal_reminder_day_3": {
+      "subject": "Quick follow-up on your proposal",
+      "body": "Hi {first_name},\n\nFollowing up on the proposal we sent over on {proposal_date}.\n\nDo you have any questions or want to discuss anything about it?\n\nHappy to hop on a quick call if that helps.\n\nTalk soon,\n{sales_rep_name}"
+    },
+    "proposal_reminder_day_10": {
+      "subject": "Let's discuss your proposal",
+      "body": "Hi {first_name},\n\nJust checking in on your side—have you had a chance to review the proposal?\n\nI'm here if you have any questions or want to explore different options.\n\nLet me know what works best for you.\n\nBest,\n{sales_rep_name}"
+    }
+  },
+
+  "slack_configuration": {
+    "workspace": "Your Company Slack",
+    "channels": {
+      "new_leads": {
+        "name": "#sales-alerts",
+        "message_template": "🆕 New lead: {first_name} {last_name} from {company} ({company_state})\n→ Assigned to: {assigned_owner}\n→ Calendar: {calendar_link}"
+      },
+      "demo_requests": {
+        "name": "#sales-demo-requests",
+        "message_template": "📅 Demo booked: {first_name} {last_name} from {company}\n→ Territory: {territory}\n→ Rep: {assigned_owner}"
+      },
+      "escalations": {
+        "name": "#sales-escalations",
+        "message_template": "🚨 Deal stalled: {company_name} - Proposal sent {days_old} days ago\n→ Deal value: ${deal_amount}\n→ Rep: {assigned_owner}\n→ Action: Follow up ASAP"
+      }
+    }
+  },
+
+  "error_handling": {
+    "error_owner_email": "sales-ops@yourcompany.com",
+    "error_log_sheet": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID",
+    "error_notification_method": "email",
+    "escalation_threshold": "3 consecutive failures",
+    "retry_attempts": 3,
+    "retry_delay_minutes": 30
+  },
+
+  "team_members": [
+    {
+      "name": "West Coast Rep",
+      "email": "west-coast-rep@yourcompany.com",
+      "role": "Account Executive",
+      "territory": "West Coast",
+      "manager": "Regional Manager West"
+    },
+    {
+      "name": "South Rep",
+      "email": "south-rep@yourcompany.com",
+      "role": "Account Executive",
+      "territory": "South",
+      "manager": "Regional Manager South"
+    },
+    {
+      "name": "East Coast Rep",
+      "email": "east-coast-rep@yourcompany.com",
+      "role": "Account Executive",
+      "territory": "East Coast",
+      "manager": "Regional Manager East"
+    },
+    {
+      "name": "Sales Team Lead",
+      "email": "sales-team-lead@yourcompany.com",
+      "role": "Sales Manager",
+      "territory": "All",
+      "manager": "VP Sales"
+    },
+    {
+      "name": "Sales Operations",
+      "email": "sales-ops@yourcompany.com",
+      "role": "Sales Operations",
+      "territory": "All",
+      "responsibility": "Error handling, monitoring, reporting"
+    }
+  ],
+
+  "test_records": [
+    {
+      "test_name": "Valid New Lead",
+      "first_name": "Test",
+      "last_name": "Lead",
+      "email": "test+lead@yourcompany.com",
+      "company": "Test Company Inc",
+      "company_state": "CA",
+      "phone": "555-0101",
+      "interested_in": "demo_request",
+      "expected_outcome": "Contact created in HubSpot, assigned to west_coast_rep, demo email sent"
+    },
+    {
+      "test_name": "Duplicate Email",
+      "first_name": "Duplicate",
+      "last_name": "Test",
+      "email": "test+duplicate@yourcompany.com",
+      "company": "Duplicate Corp",
+      "company_state": "TX",
+      "expected_outcome": "Contact updated (not created), assigned to south_rep"
+    },
+    {
+      "test_name": "South Territory",
+      "first_name": "South",
+      "last_name": "Territory",
+      "email": "test+south@yourcompany.com",
+      "company": "Texas Tech Inc",
+      "company_state": "TX",
+      "expected_outcome": "Assigned to south_rep, calendar link sent"
+    },
+    {
+      "test_name": "East Territory",
+      "first_name": "East",
+      "last_name": "Territory",
+      "email": "test+east@yourcompany.com",
+      "company": "New York Corp",
+      "company_state": "NY",
+      "expected_outcome": "Assigned to east_coast_rep, calendar link sent"
+    }
+  ],
+
+  "monitoring": {
+    "daily_checks": [
+      "Are automations running? (check last execution time)",
+      "Any failed records in error log?",
+      "How many leads captured today?",
+      "How many demos booked?"
+    ],
+    "weekly_reviews": [
+      "Total leads captured this week",
+      "Leads → demos conversion rate",
+      "Lead quality by source",
+      "Owner workload distribution",
+      "Average response time",
+      "Demo booking rate by territory"
+    ],
+    "monthly_reports": [
+      "Monthly lead volume trend",
+      "Monthly demo booking trend",
+      "Pipeline impact (demo → proposal → closed)",
+      "Cost per lead (if applicable)",
+      "Lead source ROI"
+    ]
+  },
+
+  "go_live_checklist": [
+    "HubSpot Private App created and API key saved",
+    "All custom properties created in HubSpot",
+    "Form connected to Zapier/Make and tested (3+ submissions)",
+    "All field mappings verified correct",
+    "Territory rules configured and tested",
+    "Email templates approved by sales leadership",
+    "Slack channels created and team added",
+    "All team member emails correct in HubSpot",
+    "Calendar links tested and working",
+    "Error email address monitored",
+    "Google Sheet error log created",
+    "All 7 manual tests passed",
+    "Sales team trained on new process",
+    "Launch stage set to 'pilot'",
+    "Daily monitoring scheduled",
+    "Weekly review meeting scheduled"
+  ],
+
+  "launch_notes": "Start in 'pilot' mode with 1-2 form sources. Expand to all sources after 1 week of successful automation. Plan to add lead scoring and SMS follow-ups in Month 2."
+}
